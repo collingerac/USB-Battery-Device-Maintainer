@@ -1,0 +1,17 @@
+[Unit]
+Description=Battery Maintainer Application
+After=graphical.target argonpod.service
+Wants=graphical.target
+
+[Service]
+Type=simple
+User=pi
+Environment=DISPLAY=:0
+Environment=KIVY_WINDOW=sdl2
+WorkingDirectory=/home/pi
+ExecStart=/usr/bin/python3 /home/pi/battery_maintainer.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=graphical.target
