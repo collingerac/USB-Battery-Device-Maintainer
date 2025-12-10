@@ -5,7 +5,7 @@ This guide helps you install and run the USB Battery Device Maintainer on a head
 
 ## Prerequisites
 - Raspberry Pi (3/4/5 or Zero 2 W)
-- Argon POD case with display
+- Argon POD case (optional) with display 
 - SSH access to the Raspberry Pi
 - Internet connection
 
@@ -253,3 +253,4 @@ For issues or questions:
 1. Check logs: `journalctl -u battery-maintainer`
 2. Test sensors: `sudo i2cdetect -y 1`
 3. Verify display: `DISPLAY=:0 xrandr`
+
