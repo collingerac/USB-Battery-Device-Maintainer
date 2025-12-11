@@ -1,6 +1,6 @@
 #!/bin/bash
 # Battery Maintainer Installer 
-# version 0.1.0-alpha
+# version 0.1.1-alpha
 # Status: Alpha - Testing Phase
 
 # Updating system packages

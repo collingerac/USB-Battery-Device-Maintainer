@@ -4,14 +4,41 @@
 This guide helps you install and run the USB Battery Device Maintainer on a headless Raspberry Pi with an Argon POD display (320x240 touchscreen).
 
 ## Prerequisites
-- Raspberry Pi Zero 2 W
-- Argon POD case with display 
+- Raspberry Pi (Zero 2 W)
+- Argon POD case with display
 - SSH access to the Raspberry Pi
-- Internet connection
+- Internet connection (for initial download and install)
 
 ## Installation Steps
 
-### 1. Transfer Files to Raspberry Pi
+### 1. SSH into Raspberry Pi
+
+Make sure SSH is enabled so you can connect remotely before transferring files.
+
+- If you already have a screen/keyboard attached to the Pi, enable SSH on-device:
+
+```bash
+sudo raspi-config nonint do_ssh 0    # enable SSH non-interactively
+sudo systemctl enable --now ssh      # start and enable the SSH service
+```
+
+- For a headless setup (before first boot), create an empty `ssh` file on the SD card `boot` partition:
+
+```bash
+# On your computer after flashing the image (replace /path/to/boot with the mounted boot partition)
+touch /path/to/boot/ssh
+# Optionally add Wi-Fi config (wpa_supplicant.conf) to the same partition so the Pi can connect to the network
+```
+
+- To connect from your workstation once SSH is enabled:
+
+```bash
+ssh pi@raspberrypi.local
+```
+
+Once you have SSH access you can transfer files or clone the repo from the Pi (next step).
+
+### 2. Transfer Files to Raspberry Pi
 
 Copy all project files to your Raspberry Pi:
 
@@ -23,11 +50,20 @@ scp -r "USB Device Battery Charging Manager" pi@raspberrypi.local:~/battery_main
 rsync -avz --progress "USB Device Battery Charging Manager/" pi@raspberrypi.local:~/battery_maintainer_setup/
 ```
 
-### 2. SSH into Raspberry Pi
+Alternatively, you can download the project directly on the Pi using Git (recommended if the repo is hosted):
 
 ```bash
-ssh pi@raspberrypi.local
+# On the Raspberry Pi
+cd ~
+# Clone via HTTPS
+git clone https://github.com/collingerac/battery-charging-manager.git battery_maintainer_setup
+# Or clone via SSH if you have keys configured
+# git clone git@github.com:collingerac/battery-charging-manager.git battery_maintainer_setup
+
+cd battery_maintainer_setup
 ```
+
+If you used `scp`/`rsync` you are already set; if you used `git clone`, you'll pull updates easily later with `git pull`.
 
 ### 3. Run the Installer
 
@@ -53,8 +89,8 @@ Set your USB bus and port:
 
 ```json
 {
-  "BUS": 1,
-  "PORT": 2
+   "BUS": 1,
+   "PORT": 2
 }
 ```
 
@@ -253,5 +289,3 @@ For issues or questions:
 1. Check logs: `journalctl -u battery-maintainer`
 2. Test sensors: `sudo i2cdetect -y 1`
 3. Verify display: `DISPLAY=:0 xrandr`
-
-

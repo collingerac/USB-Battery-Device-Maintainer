@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 USB Battery Device Maintainer
-Version: 0.1.0-alpha
+Version: 0.1.1-alpha
 Author: Alex
 License: MIT
 """
@@ -17,6 +17,9 @@ from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.animation import Animation
 from kivy.core.text import LabelBase
 import subprocess
+from kivy.uix.popup import Popup
+from kivy.uix.gridlayout import GridLayout
+from kivy.uix.textinput import TextInput
 
 
 def control_usb_port(location, action):
@@ -80,6 +83,10 @@ Config.set('graphics', 'multisamples', '0')
 os.environ['KIVY_GL_BACKEND'] = 'sdl2'
 
 CONFIG_FILE = '/home/pi/config.json'
+# Config defaults
+IP_ADDRESS = '192.168.1.100'
+SSH_ENABLED = False
+STATIC_IP = False
 
 if os.path.exists(CONFIG_FILE):
     with open(CONFIG_FILE, 'r') as f:
@@ -89,6 +96,9 @@ if os.path.exists(CONFIG_FILE):
         CHARGE_MINUTES = config.get('CHARGE_MINUTES', 45)
         CYCLE_DAYS = config.get('CYCLE_DAYS', 150)
         BRIGHTNESS = config.get('BRIGHTNESS', 50)
+        IP_ADDRESS = config.get('IP_ADDRESS', IP_ADDRESS)
+        SSH_ENABLED = config.get('SSH_ENABLED', SSH_ENABLED)
+        STATIC_IP = config.get('STATIC_IP', STATIC_IP)
 else:
     BUS = 1
     PORT = 0
@@ -141,7 +151,10 @@ def save_config():
         'PORT': PORT,
         'CHARGE_MINUTES': CHARGE_MINUTES,
         'CYCLE_DAYS': CYCLE_DAYS,
-        'BRIGHTNESS': BRIGHTNESS
+        'BRIGHTNESS': BRIGHTNESS,
+        'IP_ADDRESS': IP_ADDRESS,
+        'SSH_ENABLED': SSH_ENABLED,
+        'STATIC_IP': STATIC_IP
     }
     with open(CONFIG_FILE, 'w') as f:
         json.dump(config_data, f, indent=2)
@@ -155,6 +168,86 @@ def set_brightness(value):
     except:
         print(f"Could not set brightness (Argon POD may not be installed)")
         return False
+
+
+class OnScreenKeyboard(Popup):
+    """Minimal on-screen keyboard popup for touch input.
+    Inserts characters into a target `TextInput` and dismisses on ENTER.
+    """
+    def __init__(self, target=None, **kwargs):
+        super().__init__(**kwargs)
+        self.title = ''
+        self.size_hint = (0.98, 0.45)
+        self.auto_dismiss = False
+        self.target = target
+
+        # Build layout
+        outer = BoxLayout(orientation='vertical', spacing=4, padding=6)
+
+        rows = [
+            '1234567890',
+            'qwertyuiop',
+            'asdfghjkl',
+            'zxcvbnm-._@'
+        ]
+
+        for r in rows:
+            row = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=None, height=40)
+            for ch in r:
+                btn = Button(text=ch, font_size=20)
+                btn.bind(on_press=self._keypress)
+                row.add_widget(btn)
+            outer.add_widget(row)
+
+        ctrl = BoxLayout(orientation='horizontal', spacing=4, size_hint_y=None, height=48)
+        sp = Button(text='SPACE', font_size=18)
+        sp.bind(on_press=lambda *_: self._insert(' '))
+        bk = Button(text='BACK', font_size=18)
+        bk.bind(on_press=lambda *_: self._backspace())
+        en = Button(text='ENTER', font_size=18)
+        en.bind(on_press=lambda *_: self._enter())
+        ctrl.add_widget(sp)
+        ctrl.add_widget(bk)
+        ctrl.add_widget(en)
+        outer.add_widget(ctrl)
+
+        self.content = outer
+
+    def _keypress(self, instance):
+        self._insert(instance.text)
+
+    def _insert(self, text):
+        if not self.target:
+            return
+        ti = self.target
+        # insert at cursor index
+        try:
+            pos = ti.cursor_index()
+        except Exception:
+            pos = len(ti.text)
+        s = ti.text or ''
+        ti.text = s[:pos] + text + s[pos:]
+
+    def _backspace(self):
+        if not self.target:
+            return
+        ti = self.target
+        try:
+            pos = ti.cursor_index()
+        except Exception:
+            pos = len(ti.text)
+        if pos == 0:
+            return
+        s = ti.text or ''
+        ti.text = s[:pos-1] + s[pos:]
+
+    def _enter(self):
+        try:
+            if self.target:
+                self.target.focus = False
+        except Exception:
+            pass
+        self.dismiss()
 
 class SplashScreen(Screen):
     def __init__(self, **kwargs):
@@ -361,17 +454,54 @@ class SettingsScreen(Screen):
         brightness_container.add_widget(brightness_header)
         brightness_container.add_widget(self.brightness_slider)
 
-        # Buttons
+        # Buttons and network settings
+        from kivy.uix.textinput import TextInput
+        from kivy.uix.switch import Switch
+
         self.save_button = Button(text="Save & Back", font_size='26sp', background_color=(0.2,0.8,0.2,1), size_hint_y=None, height=50)
+
+        # IP address input
+        ip_row = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=None, height=45)
+        ip_label = Label(text="IP Address:", font_size='24sp', size_hint_x=0.5)
+        self.ip_input = TextInput(text=str(IP_ADDRESS), font_size='20sp', multiline=False, size_hint_x=0.5)
+        ip_row.add_widget(ip_label)
+        ip_row.add_widget(self.ip_input)
+
+        # Open on-screen keyboard when an input is focused
+        def open_osk(instance, value):
+            if value:  # focused
+                kb = OnScreenKeyboard(target=instance)
+                kb.open()
+
+        self.ip_input.bind(focus=open_osk)
+
+        # Static IP switch
+        static_row = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=None, height=45)
+        static_label = Label(text="Static IP:", font_size='24sp', size_hint_x=0.5)
+        self.static_switch = Switch(active=bool(STATIC_IP), size_hint_x=0.3)
+        static_row.add_widget(static_label)
+        static_row.add_widget(self.static_switch)
+
+        # SSH enable switch
+        ssh_row = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=None, height=45)
+        ssh_label = Label(text="SSH Enabled:", font_size='24sp', size_hint_x=0.5)
+        self.ssh_switch = Switch(active=bool(SSH_ENABLED), size_hint_x=0.3)
+        ssh_row.add_widget(ssh_label)
+        ssh_row.add_widget(self.ssh_switch)
+
         # Add all rows
         self.layout.add_widget(bus_row)
         self.layout.add_widget(port_row)
         self.layout.add_widget(charge_row)
         self.layout.add_widget(cycle_row)
         self.layout.add_widget(brightness_container)
+        self.layout.add_widget(ip_row)
+        self.layout.add_widget(static_row)
+        self.layout.add_widget(ssh_row)
         self.layout.add_widget(self.save_button)
-        self.layout.add_widget(brightness_row)
-        self.layout.add_widget(self.save_button)
+
+        # Bind save button
+        self.save_button.bind(on_press=self.save_and_back)
 
         scroll.add_widget(self.layout)
         self.add_widget(scroll)
@@ -432,7 +562,25 @@ class SettingsScreen(Screen):
         set_brightness(BRIGHTNESS)
 
     def save_and_back(self, instance):
+        # Persist UI values into globals then save
+        global IP_ADDRESS, SSH_ENABLED, STATIC_IP
+        IP_ADDRESS = self.ip_input.text.strip()
+        SSH_ENABLED = bool(self.ssh_switch.active)
+        STATIC_IP = bool(self.static_switch.active)
+
         save_config()
+
+        # Try to enable/disable SSH service if possible (best-effort)
+        try:
+            if SSH_ENABLED:
+                subprocess.run(['sudo', 'systemctl', 'enable', '--now', 'ssh'], check=True, capture_output=True)
+                print('SSH enabled')
+            else:
+                subprocess.run(['sudo', 'systemctl', 'disable', '--now', 'ssh'], check=True, capture_output=True)
+                print('SSH disabled')
+        except Exception as e:
+            print(f"Could not toggle SSH service automatically: {e}")
+
         self.manager.current = 'main'
 
 class BatteryApp(App):

@@ -26,19 +26,24 @@ A smart battery maintenance system for Raspberry Pi with Argon POD display suppo
 
 ### Installation
 
-1. **Download and transfer to Raspberry Pi:**
+1. **Install Git (if not already installed):**
    ```bash
-   git clone https://github.com/yourusername/battery-charging-manager.git
+   sudo apt update && sudo apt install -y git
+   ```
+
+2. **Download and transfer to Raspberry Pi:**
+   ```bash
+   git clone https://github.com/collingerac/battery-charging-manager.git
    cd battery-charging-manager
    ```
 
-2. **Run the installer:**
+3. **Run the installer:**
    ```bash
    chmod +x battery_maintainer_installer.sh
    ./battery_maintainer_installer.sh
    ```
 
-3. **Reboot:**
+4. **Reboot:**
    ```bash
    sudo reboot
    ```
@@ -166,9 +171,22 @@ For issues and questions, please open an issue on GitHub.
 
 ## Version
 
-Current version: **0.1.0-alpha**
+Current version: **0.1.1-alpha**
 
 ⚠️ **Alpha Release** - This software is in early testing. Features may be incomplete or unstable. Use at your own risk and report any issues on GitHub.
+
+## Release Notes
+
+### 0.1.1-alpha (2025-12-10)
+- Added network settings to the Settings tab:
+   - IP address input field
+   - Static IP toggle (best-effort application for Debian using /etc/dhcpcd.conf)
+   - SSH enable/disable toggle (attempts to enable/disable `ssh` service)
+
+- Added a touchscreen-friendly on-screen keyboard used in the Settings screen
+
+Notes: Static IP application is best-effort and requires root to write `/etc/dhcpcd.conf` and restart `dhcpcd`. The app will persist the settings to the config file even if automatic application fails; check logs for errors.
+
 
 ### Known Limitations
 - [ ] Limited hardware testing
@@ -182,3 +200,4 @@ Current version: **0.1.0-alpha**
 - [ ] Add error recovery mechanisms  
 - [ ] Comprehensive documentation
 - [ ] Community testing feedback
+
