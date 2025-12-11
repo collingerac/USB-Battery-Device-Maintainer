@@ -44,10 +44,10 @@ Copy all project files to your Raspberry Pi:
 
 ```bash
 # From your computer, use SCP
-scp -r "USB Device Battery Charging Manager" pi@raspberrypi.local:~/battery_maintainer_setup
+scp -r "USB Battery Device Maintainer" pi@raspberrypi.local:~/battery_maintainer_setup
 
 # Or use rsync for better handling
-rsync -avz --progress "USB Device Battery Charging Manager/" pi@raspberrypi.local:~/battery_maintainer_setup/
+rsync -avz --progress "USB Battery Device Maintainer/" pi@raspberrypi.local:~/battery_maintainer_setup/
 ```
 
 Alternatively, you can download the project directly on the Pi using Git (recommended if the repo is hosted):
@@ -289,3 +289,4 @@ For issues or questions:
 1. Check logs: `journalctl -u battery-maintainer`
 2. Test sensors: `sudo i2cdetect -y 1`
 3. Verify display: `DISPLAY=:0 xrandr`
+
