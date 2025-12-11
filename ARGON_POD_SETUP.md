@@ -56,9 +56,9 @@ Alternatively, you can download the project directly on the Pi using Git (recomm
 # On the Raspberry Pi
 cd ~
 # Clone via HTTPS
-git clone https://github.com/collingerac/battery-charging-manager.git battery_maintainer_setup
+git clone https://github.com/collingerac/USB-Battery-Device-Maintainer.git battery_maintainer_setup
 # Or clone via SSH if you have keys configured
-# git clone git@github.com:collingerac/battery-charging-manager.git battery_maintainer_setup
+# git clone git@github.com:collingerac/battery-charging-Maintainer.git battery_maintainer_setup
 
 cd battery_maintainer_setup
 ```
@@ -289,3 +289,4 @@ For issues or questions:
 1. Check logs: `journalctl -u battery-maintainer`
 2. Test sensors: `sudo i2cdetect -y 1`
 3. Verify display: `DISPLAY=:0 xrandr`
+
