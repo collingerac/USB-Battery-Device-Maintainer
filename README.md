@@ -33,7 +33,7 @@ A smart battery maintenance system for Raspberry Pi with Argon POD display suppo
 
 2. **Download and transfer to Raspberry Pi:**
    ```bash
-   git clone https://github.com/collingerac/battery-charging-manager.git
+   git clone https://github.com/collingerac/USB-Battery-Device-Maintainer.git
    cd battery-charging-manager
    ```
 
@@ -200,4 +200,5 @@ Notes: Static IP application is best-effort and requires root to write `/etc/dhc
 - [ ] Add error recovery mechanisms  
 - [ ] Comprehensive documentation
 - [ ] Community testing feedback
+
 
