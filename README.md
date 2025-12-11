@@ -100,8 +100,6 @@ battery-charging-manager/
 ├── battery_maintainer.py          # Main application
 ├── battery_maintainer_installer.sh # Automated installer
 ├── battery-maintainer.service      # Systemd service file
-├── gui_installer.py                # GUI installer (for desktop)
-├── make_executable.py              # Helper to make scripts executable
 ├── config.json                     # Configuration template
 ├── fonts/
 │   └── boxicons.ttf               # Icon font
@@ -200,4 +198,5 @@ Notes: Static IP application is best-effort and requires root to write `/etc/dhc
 - [ ] Add error recovery mechanisms  
 - [ ] Comprehensive documentation
 - [ ] Community testing feedback
+
 
