@@ -44,10 +44,10 @@ Copy all project files to your Raspberry Pi:
 
 ```bash
 # From your computer, use SCP
-scp -r "USB Battery Device Maintainer" pi@raspberrypi.local:~/battery_maintainer_setup
+scp -r "USB Device Battery Charging Manager" pi@raspberrypi.local:~/battery_maintainer_setup
 
 # Or use rsync for better handling
-rsync -avz --progress "USB Battery Device Maintainer/" pi@raspberrypi.local:~/battery_maintainer_setup/
+rsync -avz --progress "USB Device Battery Charging Manager/" pi@raspberrypi.local:~/battery_maintainer_setup/
 ```
 
 Alternatively, you can download the project directly on the Pi using Git (recommended if the repo is hosted):
@@ -253,21 +253,6 @@ The app is configured for low resource usage:
 - **30-second update interval** for battery readings
 - **Software rendering** optimized for small display
 
-## Remote Access
-
-### VNC (Optional)
-If you want to see the display remotely:
-
-```bash
-sudo raspi-config
-# Interface Options → VNC → Enable
-```
-
-Then connect with VNC Viewer to `raspberrypi.local`
-
-### Web Dashboard (Future Enhancement)
-Consider adding a web interface for remote monitoring without VNC.
-
 ## Uninstall
 
 ```bash
@@ -289,4 +274,3 @@ For issues or questions:
 1. Check logs: `journalctl -u battery-maintainer`
 2. Test sensors: `sudo i2cdetect -y 1`
 3. Verify display: `DISPLAY=:0 xrandr`
-

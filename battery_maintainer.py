@@ -1,10 +1,37 @@
 #!/usr/bin/env python3
 """
 USB Battery Device Maintainer
-Version: 0.1.1-alpha
+Version: 0.1.2-alpha
 Author: Alex
 License: MIT
 """
+
+# Set environment variables BEFORE importing Kivy
+import os
+os.environ['DISPLAY'] = ':99'
+os.environ['KIVY_NO_ARGS'] = '1'
+os.environ['KIVY_NO_CONSOLELOG'] = '1'  
+os.environ['KIVY_WINDOW'] = 'sdl2'
+os.environ['KIVY_GL_BACKEND'] = 'sdl2'
+# Disable clipboard to avoid xclip/xsel errors
+os.environ['KIVY_CLIPBOARD'] = 'dummy'
+# Force exact window size
+os.environ['SDL_VIDEO_WINDOW_POS'] = '0,0'
+
+# Configure Kivy BEFORE any other Kivy imports
+from kivy.config import Config
+Config.set('graphics', 'width', '320')
+Config.set('graphics', 'height', '240')
+Config.set('graphics', 'fullscreen', '0')
+Config.set('graphics', 'borderless', '1')
+Config.set('graphics', 'resizable', '0')
+Config.set('graphics', 'window_state', 'visible')
+Config.set('graphics', 'maxfps', '10')
+Config.set('graphics', 'multisamples', '0')
+# Configure touchscreen input
+Config.set('input', 'mtdev_%(name)s', 'probesysfs,provider=mtdev')
+Config.set('input', 'hid_%(name)s', 'probesysfs,provider=hidinput')
+Config.write()
 
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
@@ -12,7 +39,6 @@ from kivy.uix.label import Label
 from kivy.uix.button import Button
 from kivy.clock import Clock
 from kivy.core.window import Window
-from kivy.config import Config
 from kivy.uix.screenmanager import ScreenManager, Screen
 from kivy.animation import Animation
 from kivy.core.text import LabelBase
@@ -36,7 +62,6 @@ def control_usb_port(location, action):
 control_usb_port('1-1', 'off')  # or 'on' to enable
 from datetime import datetime, timedelta
 import json
-import os
 
 # New: For INA219 (install: sudo pip3 install adafruit-circuitpython-ina219)
 # Note: These libraries only work on Raspberry Pi/Linux with actual hardware
@@ -59,7 +84,6 @@ except Exception as e:
     print(f"INA219 not available (running on Windows or hardware not connected): {type(e).__name__}")
 
 # Register Boxicons font - use absolute path relative to script location
-import os
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 FONT_PATH = os.path.join(SCRIPT_DIR, 'fonts', 'boxicons.ttf')
 
@@ -69,18 +93,6 @@ try:
 except Exception as e:
     print(f"Warning: Could not load boxicons font from {FONT_PATH}: {e}")
     print("App will continue but icon glyphs may not display correctly.")
-
-# Configure for Argon POD display (320x240)
-Config.set('graphics', 'width', '320')
-Config.set('graphics', 'height', '240')
-Config.set('graphics', 'fullscreen', '0')
-Config.set('graphics', 'borderless', '1')
-Config.set('graphics', 'window_state', 'visible')
-Config.set('graphics', 'maxfps', '10')
-
-# Force software rendering for headless with display
-Config.set('graphics', 'multisamples', '0')
-os.environ['KIVY_GL_BACKEND'] = 'sdl2'
 
 CONFIG_FILE = '/home/pi/config.json'
 # Config defaults

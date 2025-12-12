@@ -1,26 +1,45 @@
 #!/bin/bash
 # Battery Maintainer Installer 
-# version 0.1.1-alpha
+# version 0.1.2-alpha
 # Status: Alpha - Testing Phase
 
 # Updating system packages
 sudo apt update && sudo apt upgrade -y
 
+# Remove conflicting packages if they exist
+echo "Removing any conflicting packages..."
+sudo apt remove -y python3-kivy python3-kivy-examples 2>/dev/null || true
+
 # Install required packages
 sudo apt install wget -y
 sudo apt install unzip -y
 sudo apt install cmake git -y
-sudo apt install pipx -y
 sudo apt install python3-pip python3-setuptools python3-dev -y
-sudo apt-get install python3-kivy -y
+sudo apt install libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev -y
+sudo apt install pkg-config libgl1-mesa-dev libgles2-mesa-dev -y
+sudo apt install libmtdev-dev -y
 sudo apt install uhubctl -y
 sudo apt install python3-usb -y
-sudo pip3 install adafruit-circuitpython-ads1x15 --break-system-packages
-sudo pip3 install adafruit-circuitpython-busdevice --break-system-packages
-sudo pip3 install adafruit-blinka --break-system-packages
-sudo pip3 install adafruit-circuitpython-ina219 --break-system-packages
-# Install Kivy Garden (iconfonts is optional - app will work without it)
-sudo pip3 install kivy-garden --break-system-packages
+
+# Install Xvfb for virtual display and ffmpeg for framebuffer mirroring
+echo "Installing virtual display system..."
+sudo apt install -y xvfb ffmpeg unclutter
+
+# Install Python packages via pip (without X11 dependencies)
+echo "Installing Python packages..."
+sudo pip3 install Cython==0.29.36 --break-system-packages --root-user-action=ignore
+sudo pip3 install kivy[base] --break-system-packages --root-user-action=ignore
+sudo pip3 install adafruit-circuitpython-ads1x15 --break-system-packages --root-user-action=ignore
+sudo pip3 install adafruit-circuitpython-busdevice --break-system-packages --root-user-action=ignore
+sudo pip3 install adafruit-blinka --break-system-packages --root-user-action=ignore
+sudo pip3 install adafruit-circuitpython-ina219 --break-system-packages --root-user-action=ignore
+sudo pip3 install kivy-garden --break-system-packages --root-user-action=ignore
+
+# Add pi user to video group for framebuffer access
+echo "Adding pi user to video group..."
+sudo usermod -a -G video pi
+
+# Enable I2C
 sudo raspi-config nonint do_i2c 0
 
 # Verify I2C was enabled successfully
@@ -45,41 +64,27 @@ else
     echo "Downloading Boxicons font..."
     mkdir -p "$FONTS_DIR"
     
-    # Fetch the latest Boxicons release version from GitHub API
-    echo "Fetching latest Boxicons version..."
-    BOXICONS_VERSION=$(curl -s https://api.github.com/repos/atisawd/boxicons/releases/latest | grep '"tag_name":' | sed -E 's/.*"v([^"]+)".*/\1/')
+    # Try direct download from jsdelivr CDN (more reliable than GitHub releases)
+    echo "Downloading from CDN..."
+    wget -q "https://cdn.jsdelivr.net/npm/boxicons@2.1.4/fonts/boxicons.ttf" -O "$BOXICONS_TTF"
     
-    if [ -z "$BOXICONS_VERSION" ]; then
-        echo "Could not fetch latest version, using v2.1.4 as fallback"
-        BOXICONS_VERSION="2.1.4"
+    if [ $? -eq 0 ] && [ -f "$BOXICONS_TTF" ] && [ -s "$BOXICONS_TTF" ]; then
+        echo "✓ Boxicons font downloaded successfully"
     else
-        echo "Latest version: v$BOXICONS_VERSION"
-    fi
-    
-    # Download Boxicons release
-    wget -q "https://github.com/atisawd/boxicons/archive/v${BOXICONS_VERSION}.zip" -O /tmp/boxicons.zip
-    
-    if [ $? -eq 0 ]; then
-        echo "Download complete, extracting font file..."
-        # Extract the font file
-        unzip -q -j /tmp/boxicons.zip "boxicons-${BOXICONS_VERSION}/fonts/boxicons.ttf" -d "$FONTS_DIR" 2>/dev/null
+        echo "CDN download failed, trying GitHub..."
+        rm -f "$BOXICONS_TTF"
         
-        if [ $? -ne 0 ]; then
-            # Try alternative extraction path (in case folder structure is different)
-            unzip -q /tmp/boxicons.zip "*/fonts/boxicons.ttf" 2>/dev/null
-            find /tmp -name "boxicons.ttf" -exec cp {} "$FONTS_DIR/" \; 2>/dev/null
-        fi
+        # Fallback: try direct download from GitHub raw content
+        wget -q "https://github.com/atisawd/boxicons/raw/master/fonts/boxicons.ttf" -O "$BOXICONS_TTF"
         
-        rm /tmp/boxicons.zip
-        
-        if [ -f "$BOXICONS_TTF" ]; then
-            echo "✓ Boxicons font v$BOXICONS_VERSION downloaded successfully"
+        if [ $? -eq 0 ] && [ -f "$BOXICONS_TTF" ] && [ -s "$BOXICONS_TTF" ]; then
+            echo "✓ Boxicons font downloaded successfully from GitHub"
         else
-            echo "✗ Warning: Failed to extract Boxicons font"
+            echo "✗ Warning: Failed to download Boxicons font"
+            echo "  App will work without icon glyphs"
             echo "  You can manually download from: https://boxicons.com/"
+            rm -f "$BOXICONS_TTF"
         fi
-    else
-        echo "✗ Warning: Failed to download Boxicons. App will work without icons."
     fi
 fi
 
@@ -89,15 +94,25 @@ fi
 # Prompt user to confirm if they're using an Argon device
 read -p "Are you installing on an Argon POD device? (y/n): " -n 1 -r
 echo
+ARGON_INSTALLED=false
 if [[ $REPLY =~ ^[Yy]$ ]]; then
 	echo "Installing Argon POD system drivers..."
 	curl -sSL https://download.argon40.com/podsystem.sh | sudo bash
 	# Configuring Argon POD system
 	if command -v argonpod-config &> /dev/null; then
-		argonpod-config --enable-touch --enable-display --display_rotate=2
-		# Enable Argon POD to start on boot
-		sudo systemctl enable argonpod
+		echo "Configuring Argon POD display..."
+		sudo argonpod-config --enable-touch --enable-display --display_rotate=3 --non-interactive 2>/dev/null || \
+		sudo argonpod-config --enable-touch --enable-display --display_rotate=3 < /dev/null
+		# Enable Argon POD to start on boot (only if service exists)
+		sudo systemctl daemon-reload
+		if sudo systemctl enable argonpod 2>/dev/null; then
+			echo "Argon POD service enabled for auto-start"
+		else
+			echo "Note: argonpod service not available - display will be configured via kernel modules"
+		fi
+		ARGON_INSTALLED=true
 		echo "Argon POD drivers installed and configured successfully."
+		echo "Note: Display rotation will take effect after reboot."
 	else
 		echo "Warning: Argon POD configuration command not found after installation."
 	fi
@@ -115,7 +130,26 @@ mkdir -p "$INSTALL_DIR/fonts"
 
 # Copy files
 cp "$SCRIPT_DIR/battery_maintainer.py" "$INSTALL_DIR/" 2>/dev/null || echo "Warning: Could not copy battery_maintainer.py"
-cp "$SCRIPT_DIR/config.json" "$INSTALL_DIR/" 2>/dev/null || echo "Config file not found, will be created on first run"
+
+# Create default config.json if it doesn't exist in source or destination
+if [ ! -f "$SCRIPT_DIR/config.json" ]; then
+    echo "Creating default config.json..."
+    cat > "$INSTALL_DIR/config.json" << 'CONFIGEOF'
+{
+  "BUS": 1,
+  "PORT": 0,
+  "CHARGE_MINUTES": 45,
+  "CYCLE_DAYS": 150,
+  "BRIGHTNESS": 50,
+  "IP_ADDRESS": "192.168.1.100",
+  "SSH_ENABLED": false,
+  "STATIC_IP": false
+}
+CONFIGEOF
+else
+    cp "$SCRIPT_DIR/config.json" "$INSTALL_DIR/" 2>/dev/null
+fi
+
 cp -r "$SCRIPT_DIR/fonts/"* "$INSTALL_DIR/fonts/" 2>/dev/null || echo "Warning: Could not copy fonts"
 
 # Set permissions
@@ -124,50 +158,124 @@ chmod +x "$INSTALL_DIR/battery_maintainer.py"
 
 echo "✓ Application files installed to $INSTALL_DIR"
 
+# Configure X server for fb1 framebuffer
+echo ""
+echo "Configuring system for Argon POD display..."
+
+# Disable HDMI to make Argon POD (fb1) the primary display
+if ! grep -q "hdmi_blanking=2" /boot/firmware/config.txt; then
+    echo "Disabling HDMI output..."
+    sudo bash -c 'echo "" >> /boot/firmware/config.txt'
+    sudo bash -c 'echo "# Disable HDMI for Argon POD primary display" >> /boot/firmware/config.txt'
+    sudo bash -c 'echo "hdmi_blanking=2" >> /boot/firmware/config.txt'
+    sudo bash -c 'echo "disable_splash=1" >> /boot/firmware/config.txt'
+fi
+
+# Disable console cursor
+if ! grep -q "vt.global_cursor_default=0" /boot/firmware/cmdline.txt; then
+    echo "Disabling console cursor..."
+    sudo sed -i 's/$/ vt.global_cursor_default=0/' /boot/firmware/cmdline.txt
+fi
+
+echo "✓ System configured for Argon POD display"
+
+# Create startup script
+echo ""
+echo "Creating startup script..."
+sudo tee /usr/local/bin/battery-maintainer-start.sh > /dev/null << 'STARTSCRIPT'
+#!/bin/bash
+# Start Xvfb virtual display
+Xvfb :99 -screen 0 320x240x24 &
+XVFB_PID=$!
+sleep 3
+
+# Hide the X cursor
+export DISPLAY=:99
+unclutter -idle 0 -root &
+
+# Start the Python app
+cd /home/pi/battery_maintainer
+python3 battery_maintainer.py &
+APP_PID=$!
+sleep 5
+
+# Start ffmpeg to mirror to Argon POD
+ffmpeg -loglevel error -f x11grab -video_size 320x240 -framerate 10 -i :99 -pix_fmt rgb565le -f fbdev /dev/fb1 &
+FFMPEG_PID=$!
+
+# Wait for any process to exit
+wait
+STARTSCRIPT
+
+sudo chmod +x /usr/local/bin/battery-maintainer-start.sh
+echo "✓ Startup script created"
+
 # Install systemd service for auto-start
 echo ""
 echo "Setting up auto-start service..."
 SERVICE_FILE="/etc/systemd/system/battery-maintainer.service"
 
-cat > "$SERVICE_FILE" << 'SERVICEEOF'
+sudo tee "$SERVICE_FILE" > /dev/null << 'SERVICEEOF'
 [Unit]
 Description=Battery Maintainer Application
-After=graphical.target argonpod.service
-Wants=graphical.target
+After=multi-user.target
 
 [Service]
 Type=simple
-User=pi
-Environment=DISPLAY=:0
-Environment=KIVY_WINDOW=sdl2
+User=root
 WorkingDirectory=/home/pi/battery_maintainer
-ExecStart=/usr/bin/python3 /home/pi/battery_maintainer/battery_maintainer.py
+ExecStartPre=/bin/sleep 30
+ExecStart=/usr/local/bin/battery-maintainer-start.sh
 Restart=on-failure
 RestartSec=10
+SyslogIdentifier=battery-maintainer
 
 [Install]
-WantedBy=graphical.target
+WantedBy=multi-user.target
 SERVICEEOF
 
 # Reload systemd and enable service
-systemctl daemon-reload
-systemctl enable battery-maintainer.service
+sudo systemctl daemon-reload
+sudo systemctl enable battery-maintainer.service
 
 echo "✓ Auto-start service installed"
 echo ""
-echo "=" * 70
+echo "Testing service configuration..."
+# Try to start the service immediately to check for errors
+if sudo systemctl start battery-maintainer.service; then
+    sleep 3
+    if sudo systemctl is-active --quiet battery-maintainer.service; then
+        echo "✓ Service started successfully"
+    else
+        echo "✗ Service failed to start - checking logs..."
+        sudo journalctl -u battery-maintainer -n 20 --no-pager
+    fi
+else
+    echo "✗ Service failed to start - checking logs..."
+    sudo journalctl -u battery-maintainer -n 20 --no-pager
+fi
+
+echo ""
+echo "======================================================================"
 echo "Installation Complete!"
-echo "=" * 70
+echo "======================================================================"
 echo ""
 echo "Next steps:"
-echo "1. Edit /home/pi/battery_maintainer/config.json to configure USB ports"
-echo "2. Reboot the system: sudo reboot"
-echo "3. The app will start automatically on boot"
+echo "1. Check service status: sudo systemctl status battery-maintainer"
+echo "2. View logs: sudo journalctl -u battery-maintainer -f"
+echo "3. Edit config if needed: nano /home/pi/battery_maintainer/config.json"
+echo "4. Reboot the system: sudo reboot"
+echo ""
+echo "If the service isn't running, check:"
+echo "  - Framebuffer device exists: ls -l /dev/fb*"
+echo "  - Python dependencies: pip3 list | grep kivy"
+echo "  - Application file exists: ls -l /home/pi/battery_maintainer/"
 echo ""
 echo "Useful commands:"
 echo "  sudo systemctl status battery-maintainer   # Check app status"
 echo "  sudo systemctl restart battery-maintainer  # Restart app"
 echo "  sudo systemctl stop battery-maintainer     # Stop app"
 echo "  sudo systemctl disable battery-maintainer  # Disable auto-start"
+echo "  sudo journalctl -u battery-maintainer -f   # View live logs"
 echo ""
 

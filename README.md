@@ -175,6 +175,23 @@ Current version: **0.1.1-alpha**
 
 ## Release Notes
 
+### 0.1.2-alpha (2025-12-11)
+- Bugfixes:
+   - fixed bug that caused `battery-maintainer.service` to not install correctly
+   - fixed bug that made the `Useful Commands` for the battery maintainer app to not work
+   - fixed bug that caused `boxicons.ttf` to not install correctly
+   - fixed `argonpod.service` doesn't exist error during install process
+   - fixed the problem that prevented the `config.json` file from being generated during installation
+
+- Known Issues:
+   - The screen does not automatically flip for the ArgonPOD Display upon installation (user action is needed)  
+   - The `Argonpod-config` does not automatically close during the installation process (user action is needed)  
+      - **Workaround:** manually adjust the screen orientation in `Argonpod-config` and manually exit `Argonpod-config`
+
+   - The touchscreen doesn't work! **(to be fixed in a future release)**
+
+
+
 ### 0.1.1-alpha (2025-12-10)
 - Added network settings to the Settings tab:
    - IP address input field
@@ -198,5 +215,3 @@ Notes: Static IP application is best-effort and requires root to write `/etc/dhc
 - [ ] Add error recovery mechanisms  
 - [ ] Comprehensive documentation
 - [ ] Community testing feedback
-
-
