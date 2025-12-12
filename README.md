@@ -169,7 +169,7 @@ For issues and questions, please open an issue on GitHub.
 
 ## Version
 
-Current version: **0.1.1-alpha**
+Current version: **0.1.2-alpha**
 
 ⚠️ **Alpha Release** - This software is in early testing. Features may be incomplete or unstable. Use at your own risk and report any issues on GitHub.
 
@@ -214,4 +214,5 @@ Notes: Static IP application is best-effort and requires root to write `/etc/dhc
 - [ ] Validate sensor readings
 - [ ] Add error recovery mechanisms  
 - [ ] Comprehensive documentation
+
 - [ ] Community testing feedback
