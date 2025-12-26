@@ -169,11 +169,29 @@ For issues and questions, please open an issue on GitHub.
 
 ## Version
 
-Current version: **0.1.2-alpha**
+Current version: **0.1.3-alpha**
 
 ⚠️ **Alpha Release** - This software is in early testing. Features may be incomplete or unstable. Use at your own risk and report any issues on GitHub.
 
 ## Release Notes
+
+### 0.1.3-alpha (2025-12-25)
+- New:
+   - Added Startup splashscreen 
+   - Added voltage-based charge monitoring to stop charging when a device reaches a target percentage
+
+- Bugfixes:
+   - UI/UX improvements and bugfixes
+   - Physical buttons now work on ArgonPOD
+   - locked Boxicons to version 2.1.4 to prevent any unwanted changes to the icons used in the app with Boxicons updates 
+
+- Known Issues:
+   - The screen does not automatically flip for the ArgonPOD Display upon installation (user action is needed)
+   - The Argonpod-config does not automatically close during the installation process (user action is needed)
+      - **Workaround:** manually adjust the screen orientation in `Argonpod-config` and manually exit `Argonpod-config`
+
+   - The touchscreen doesn't work reliably! **(to be fixed in a future release)**
+
 
 ### 0.1.2-alpha (2025-12-11)
 - Bugfixes:
@@ -214,5 +232,4 @@ Notes: Static IP application is best-effort and requires root to write `/etc/dhc
 - [ ] Validate sensor readings
 - [ ] Add error recovery mechanisms  
 - [ ] Comprehensive documentation
-
 - [ ] Community testing feedback

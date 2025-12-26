@@ -6,10 +6,10 @@ Wants=graphical.target
 [Service]
 Type=simple
 User=pi
-Environment=DISPLAY=:0
+# Remove DISPLAY for framebuffer (Argon POD)
 Environment=KIVY_WINDOW=sdl2
-WorkingDirectory=/home/pi
-ExecStart=/usr/bin/python3 /home/pi/battery_maintainer.py
+WorkingDirectory=/home/pi/USB-Battery-Device-Maintainer
+ExecStart=/usr/bin/python3 /home/pi/USB-Battery-Device-Maintainer/battery_maintainer.py
 Restart=on-failure
 RestartSec=10
 

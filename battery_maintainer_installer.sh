@@ -1,6 +1,6 @@
 #!/bin/bash
 # Battery Maintainer Installer 
-# version 0.1.2-alpha
+# version 0.1.3-alpha
 # Status: Alpha - Testing Phase
 
 # Updating system packages
@@ -23,7 +23,7 @@ sudo apt install python3-usb -y
 
 # Install Xvfb for virtual display and ffmpeg for framebuffer mirroring
 echo "Installing virtual display system..."
-sudo apt install -y xvfb ffmpeg unclutter
+sudo apt install -y xvfb ffmpeg unclutter xdotool python3-evdev
 
 # Install Python packages via pip (without X11 dependencies)
 echo "Installing Python packages..."
@@ -57,34 +57,37 @@ echo "Checking for Boxicons font..."
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 FONTS_DIR="$SCRIPT_DIR/fonts"
 BOXICONS_TTF="$FONTS_DIR/boxicons.ttf"
+BOXICONS_CSS="$FONTS_DIR/boxicons.css"
 
-if [ -f "$BOXICONS_TTF" ]; then
-    echo "✓ Boxicons font already exists"
+# Pin to specific version to prevent future releases from breaking icon codes
+BOXICONS_VERSION="2.1.4"
+
+if [ -f "$BOXICONS_TTF" ] && [ -f "$BOXICONS_CSS" ]; then
+    echo "✓ Boxicons font and CSS already exist"
 else
-    echo "Downloading Boxicons font..."
+    echo "Downloading Boxicons font and CSS (version ${BOXICONS_VERSION})..."
     mkdir -p "$FONTS_DIR"
     
-    # Try direct download from jsdelivr CDN (more reliable than GitHub releases)
-    echo "Downloading from CDN..."
-    wget -q "https://cdn.jsdelivr.net/npm/boxicons@2.1.4/fonts/boxicons.ttf" -O "$BOXICONS_TTF"
+    # Download TTF font from pinned version
+    echo "Downloading boxicons.ttf (v${BOXICONS_VERSION})..."
+    wget -q "https://cdn.jsdelivr.net/npm/boxicons@${BOXICONS_VERSION}/fonts/boxicons.ttf" -O "$BOXICONS_TTF"
     
     if [ $? -eq 0 ] && [ -f "$BOXICONS_TTF" ] && [ -s "$BOXICONS_TTF" ]; then
-        echo "✓ Boxicons font downloaded successfully"
+        echo "✓ Boxicons TTF v${BOXICONS_VERSION} downloaded successfully"
     else
-        echo "CDN download failed, trying GitHub..."
+        echo "✗ Warning: Failed to download boxicons.ttf v${BOXICONS_VERSION}"
         rm -f "$BOXICONS_TTF"
-        
-        # Fallback: try direct download from GitHub raw content
-        wget -q "https://github.com/atisawd/boxicons/raw/master/fonts/boxicons.ttf" -O "$BOXICONS_TTF"
-        
-        if [ $? -eq 0 ] && [ -f "$BOXICONS_TTF" ] && [ -s "$BOXICONS_TTF" ]; then
-            echo "✓ Boxicons font downloaded successfully from GitHub"
-        else
-            echo "✗ Warning: Failed to download Boxicons font"
-            echo "  App will work without icon glyphs"
-            echo "  You can manually download from: https://boxicons.com/"
-            rm -f "$BOXICONS_TTF"
-        fi
+    fi
+    
+    # Download CSS file for icon mappings from pinned version
+    echo "Downloading boxicons.css (v${BOXICONS_VERSION})..."
+    wget -q "https://cdn.jsdelivr.net/npm/boxicons@${BOXICONS_VERSION}/css/boxicons.css" -O "$BOXICONS_CSS"
+    
+    if [ $? -eq 0 ] && [ -f "$BOXICONS_CSS" ] && [ -s "$BOXICONS_CSS" ]; then
+        echo "✓ Boxicons CSS v${BOXICONS_VERSION} downloaded successfully"
+    else
+        echo "✗ Warning: Failed to download boxicons.css v${BOXICONS_VERSION}"
+        rm -f "$BOXICONS_CSS"
     fi
 fi
 
@@ -110,14 +113,35 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
 		else
 			echo "Note: argonpod service not available - display will be configured via kernel modules"
 		fi
-		ARGON_INSTALLED=true
-		echo "Argon POD drivers installed and configured successfully."
-		echo "Note: Display rotation will take effect after reboot."
+           ARGON_INSTALLED=true
+           echo "Argon POD drivers installed and configured successfully."
+           echo "Note: Display rotation will take effect after reboot."
+
+           # Configure X server for fb1 framebuffer and disable HDMI/cursor ONLY for Argon POD
+           echo ""
+           echo "Configuring system for Argon POD display..."
+
+           # Disable HDMI to make Argon POD (fb1) the primary display
+           if ! grep -q "hdmi_blanking=2" /boot/firmware/config.txt; then
+               echo "Disabling HDMI output..."
+               sudo bash -c 'echo "" >> /boot/firmware/config.txt'
+               sudo bash -c 'echo "# Disable HDMI for Argon POD primary display" >> /boot/firmware/config.txt'
+               sudo bash -c 'echo "hdmi_blanking=2" >> /boot/firmware/config.txt'
+               sudo bash -c 'echo "disable_splash=1" >> /boot/firmware/config.txt'
+           fi
+
+           # Disable console cursor
+           if ! grep -q "vt.global_cursor_default=0" /boot/firmware/cmdline.txt; then
+               echo "Disabling console cursor..."
+               sudo sed -i 's/$/ vt.global_cursor_default=0/' /boot/firmware/cmdline.txt
+           fi
+
+           echo "✓ System configured for Argon POD display"
 	else
 		echo "Warning: Argon POD configuration command not found after installation."
 	fi
 else
-	echo "Skipping Argon POD driver installation."
+    echo "Skipping Argon POD driver installation."
 fi
 
 
@@ -158,26 +182,26 @@ chmod +x "$INSTALL_DIR/battery_maintainer.py"
 
 echo "✓ Application files installed to $INSTALL_DIR"
 
-# Configure X server for fb1 framebuffer
-echo ""
-echo "Configuring system for Argon POD display..."
-
-# Disable HDMI to make Argon POD (fb1) the primary display
-if ! grep -q "hdmi_blanking=2" /boot/firmware/config.txt; then
-    echo "Disabling HDMI output..."
-    sudo bash -c 'echo "" >> /boot/firmware/config.txt'
-    sudo bash -c 'echo "# Disable HDMI for Argon POD primary display" >> /boot/firmware/config.txt'
-    sudo bash -c 'echo "hdmi_blanking=2" >> /boot/firmware/config.txt'
-    sudo bash -c 'echo "disable_splash=1" >> /boot/firmware/config.txt'
-fi
-
-# Disable console cursor
-if ! grep -q "vt.global_cursor_default=0" /boot/firmware/cmdline.txt; then
-    echo "Disabling console cursor..."
-    sudo sed -i 's/$/ vt.global_cursor_default=0/' /boot/firmware/cmdline.txt
-fi
-
 echo "✓ System configured for Argon POD display"
+
+# Install touch forwarding script
+echo ""
+echo "Installing touch input forwarding script..."
+if [ -f "$SCRIPT_DIR/touch-to-xvfb.py" ]; then
+    # Copy to project folder
+    cp "$SCRIPT_DIR/touch-to-xvfb.py" "$INSTALL_DIR/touch-to-xvfb.py"
+    chmod +x "$INSTALL_DIR/touch-to-xvfb.py"
+    chown pi:pi "$INSTALL_DIR/touch-to-xvfb.py"
+    
+    # Create symlink in /usr/local/bin for system-wide access
+    sudo ln -sf "$INSTALL_DIR/touch-to-xvfb.py" /usr/local/bin/touch-to-xvfb.py
+    echo "✓ Touch forwarding script installed"
+    echo "  Location: $INSTALL_DIR/touch-to-xvfb.py"
+    echo "  Symlinked to: /usr/local/bin/touch-to-xvfb.py"
+else
+    echo "✗ Warning: touch-to-xvfb.py not found in $SCRIPT_DIR"
+    echo "  Touch input may not work. Please ensure touch-to-xvfb.py is in the same directory as the installer."
+fi
 
 # Create startup script
 echo ""
@@ -192,6 +216,10 @@ sleep 3
 # Hide the X cursor
 export DISPLAY=:99
 unclutter -idle 0 -root &
+
+# Start touch input forwarder
+python3 /usr/local/bin/touch-to-xvfb.py &
+TOUCH_PID=$!
 
 # Start the Python app
 cd /home/pi/battery_maintainer
@@ -218,20 +246,21 @@ SERVICE_FILE="/etc/systemd/system/battery-maintainer.service"
 sudo tee "$SERVICE_FILE" > /dev/null << 'SERVICEEOF'
 [Unit]
 Description=Battery Maintainer Application
-After=multi-user.target
+After=graphical.target argonpod.service
+Wants=graphical.target
 
 [Service]
 Type=simple
-User=root
-WorkingDirectory=/home/pi/battery_maintainer
-ExecStartPre=/bin/sleep 30
-ExecStart=/usr/local/bin/battery-maintainer-start.sh
+User=pi
+# Remove DISPLAY for framebuffer (Argon POD)
+Environment=KIVY_WINDOW=sdl2
+WorkingDirectory=/home/pi/USB-Battery-Device-Maintainer
+ExecStart=/usr/bin/python3 /home/pi/USB-Battery-Device-Maintainer/battery_maintainer.py
 Restart=on-failure
 RestartSec=10
-SyslogIdentifier=battery-maintainer
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=graphical.target
 SERVICEEOF
 
 # Reload systemd and enable service
